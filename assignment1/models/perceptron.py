@@ -16,6 +16,7 @@ class Perceptron:
         self.lr = lr
         self.epochs = epochs
         self.n_class = n_class
+        self.reg_const = 0.03
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -28,21 +29,32 @@ class Perceptron:
             y_train: a numpy array of shape (N,) containing training labels
         """
         # TODO: implement me
+        # Parse dimension
         samples = X_train.shape[0]
         dim = X_train.shape[1]
+        decay_rate = 1
+        
+        # Randomize starting weights
         self.w = np.random.rand(dim, self.n_class)
+        
         for epoch in range(self.epochs):
-            print(epoch)
+            print("Epoch #", epoch)
+
+            # Decay learning rate
+            lr = (1 / (1 + decay_rate * epoch)) * self.lr   
+
             for x in range(samples):
                 for c in range(self.n_class):
+                    # Only update the weights for incorrect classes
                     if c != y_train[x]:
-                        # print(c, y_train[x])
-                        # print(np.transpose(self.w)[c].shape, np.transpose(self.w)[y_train[x]].shape)
-                        # print("Wrong: ", np.vdot(np.transpose(self.w)[c], X_train[x]), "Right: ", np.vdot(np.transpose(self.w)[y_train[x]], X_train[x]))
                         if np.dot(np.transpose(self.w)[c], X_train[x]) > np.dot(np.transpose(self.w)[y_train[x]], X_train[x]):
-                            self.w[:, y_train[x]] = self.w[:, y_train[x]] + self.lr * X_train[x]
-                            np.transpose(self.w)[c] = np.transpose(self.w)[c] - self.lr * X_train[x]
-                            # print(self.lr * X_train[x], self.lr * X_train[x])
+                            np.transpose(self.w)[y_train[x]] = np.transpose(self.w)[y_train[x]] + lr * X_train[x]
+                            np.transpose(self.w)[c] = np.transpose(self.w)[c] - lr * X_train[x]
+                    
+                    # Regularization
+                    np.transpose(self.w)[c] += (lr * self.reg_const / samples) * np.transpose(self.w)[c]
+            
+            
 
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
@@ -59,5 +71,4 @@ class Perceptron:
         """
         # TODO: implement me           
         y_pred = X_test @ self.w
-        # print(y_pred)
         return [np.argmax(i) for i in y_pred]
