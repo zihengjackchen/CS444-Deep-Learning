@@ -42,15 +42,10 @@ class SVM:
         
         for x in range(batch_size):
             for c in range(self.n_class):
-                
                 if c != y_train[x]:
-                    # print(c, y_train[x])
-                    # print(np.transpose(batch_w)[c].shape, np.transpose(batch_w)[y_train[x]].shape)
-                    # print("Wrong: ", np.vdot(np.transpose(batch_w)[c], X_train[x]), "Right: ", np.vdot(np.transpose(batch_w)[y_train[x]], X_train[x]))
                     if np.dot(np.transpose(self.w)[y_train[x]], X_train[x]) - np.dot(np.transpose(self.w)[c], X_train[x]) < 1:
                         np.transpose(batch_w)[y_train[x]] = np.transpose(batch_w)[y_train[x]] + self.lr * X_train[x]
                         np.transpose(batch_w)[c] = np.transpose(batch_w)[c] - self.lr * X_train[x]
-                        # print(self.lr * X_train[x], self.lr * X_train[x])
                 np.transpose(batch_w)[c] = np.transpose(batch_w)[c] - (self.lr * self.reg_const / batch_size) * np.transpose(self.w)[c]
         return batch_w/batch_size
 
@@ -66,20 +61,37 @@ class SVM:
             s
         """
         # TODO: implement me
+        # Parse dimensions
         samples = X_train.shape[0]
         dim = X_train.shape[1]
+
+        # Set random weight
         self.w = np.random.rand(dim, self.n_class)
+
+        # Set up mini-batch stocastic gradient descent
         batch_size = 1000
         batches = samples // batch_size
+        indices = np.arange(samples)
 
         for epoch in range(self.epochs):
-            print(epoch)
+            # Print intermediate accuracy
+            y_pred = X_train @ self.w
+            temp = [np.argmax(i) for i in y_pred]
+            print("Epoch", epoch, "Accuracy",np.sum(y_train == temp) / len(y_train) * 100)
+
+            # Gradient descent
+            np.random.shuffle(indices)
             for batch in range(batches):
-                if batch == batches-1:
-                    batch_w = self.calc_gradient(X_train[batch*batch_size:], y_train[batch*batch_size:])
-                else:
-                    batch_w = self.calc_gradient(X_train[batch*batch_size:(batch+1)*batch_size], y_train[batch*batch_size:(batch+1)*batch_size])
+                start = batch * batch_size
+                end = (batch + 1) * batch_size
+                if end >= samples:
+                    end = -1
+                batch_indices = indices[start: end]
+                batch_w = self.calc_gradient(X_train[batch_indices], y_train[batch_indices])
                 self.w += self.lr * batch_w
+            
+            # Decrease learning rate
+            self.lr *= 0.85
 
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
@@ -96,5 +108,4 @@ class SVM:
         """
         # TODO: implement me
         y_pred = X_test @ self.w
-        # print(y_pred)
         return [np.argmax(i) for i in y_pred]
