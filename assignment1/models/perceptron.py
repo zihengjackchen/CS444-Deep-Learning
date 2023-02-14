@@ -16,7 +16,7 @@ class Perceptron:
         self.lr = lr
         self.epochs = epochs
         self.n_class = n_class
-        self.reg_const = 0.03
+        self.reg_const = 0.1
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -36,23 +36,28 @@ class Perceptron:
         
         # Randomize starting weights
         self.w = np.random.rand(dim, self.n_class)
-        
+        indices = np.arange(samples)
+
         for epoch in range(self.epochs):
-            print("Epoch #", epoch)
+            y_pred = X_train @ self.w
+            temp = [np.argmax(i) for i in y_pred]
+            print("Epoch", epoch, "Accuracy",np.sum(y_train == temp) / len(y_train) * 100)
 
-            # Decay learning rate
-            lr = (1 / (1 + decay_rate * epoch)) * self.lr   
+            np.random.shuffle(indices)
 
-            for x in range(samples):
+            for x in indices:
                 for c in range(self.n_class):
                     # Only update the weights for incorrect classes
                     if c != y_train[x]:
                         if np.dot(np.transpose(self.w)[c], X_train[x]) > np.dot(np.transpose(self.w)[y_train[x]], X_train[x]):
-                            np.transpose(self.w)[y_train[x]] = np.transpose(self.w)[y_train[x]] + lr * X_train[x]
-                            np.transpose(self.w)[c] = np.transpose(self.w)[c] - lr * X_train[x]
+                            np.transpose(self.w)[y_train[x]] = np.transpose(self.w)[y_train[x]] + self.lr * X_train[x]
+                            np.transpose(self.w)[c] = np.transpose(self.w)[c] - self.lr * X_train[x]
                     
                     # Regularization
-                    np.transpose(self.w)[c] += (lr * self.reg_const / samples) * np.transpose(self.w)[c]
+                    np.transpose(self.w)[c] += (self.lr * self.reg_const / samples) * np.transpose(self.w)[c]
+
+            # Decrease learning rate
+            self.lr *= 0.85
             
             
 
