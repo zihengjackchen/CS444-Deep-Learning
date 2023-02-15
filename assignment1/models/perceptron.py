@@ -16,7 +16,7 @@ class Perceptron:
         self.lr = lr
         self.epochs = epochs
         self.n_class = n_class
-        self.reg_const = 0.1
+        self.reg_const = 8
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -32,7 +32,6 @@ class Perceptron:
         # Parse dimension
         samples = X_train.shape[0]
         dim = X_train.shape[1]
-        decay_rate = 1
         
         # Randomize starting weights
         self.w = np.random.rand(dim, self.n_class)

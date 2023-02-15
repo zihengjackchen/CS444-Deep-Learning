@@ -20,10 +20,7 @@ class Softmax:
         self.n_class = n_class
 
     def calc_gradient(self, X_train: np.ndarray, y_train: np.ndarray) -> np.ndarray:
-        """Calculate gradient of the softmax loss.
-
-        Inputs have dimension D, there are C classes, and we operate on
-        mini-batches of N examples.
+        """Calculate gradient of the softmax loss for a mini-batch.
 
         Parameters:
             X_train: a numpy array of shape (N, D) containing a mini-batch
@@ -34,29 +31,16 @@ class Softmax:
         Returns:
             gradient with respect to weights w; an array of same shape as w
         """
-        # TODO: implement me
-        batch_size = X_train.shape[0]
-        dim = X_train.shape[1]
-        batch_w = (0.01) * np.zeros((dim, self.n_class))
-        
-        for x_ind in range(batch_size):
-            x = X_train[x_ind]
-            y = y_train[x_ind]
-            
-            fs = x @ self.w
-            exps = np.exp(fs - np.max(fs))
-            sum_exp = np.sum(exps)
-            
-            for c in range(self.n_class):
-                prob = exps[c]/sum_exp
-                if c != y:
-                    np.transpose(batch_w)[c] += prob * x
-                else:
-                    np.transpose(batch_w)[y] += (prob - 1) * x
-                    
-                np.transpose(batch_w)[c] += (self.lr * self.reg_const / batch_size) * np.transpose(self.w)[c]
-        return batch_w/batch_size
-        
+        N = X_train.shape[0]
+        fs = X_train.dot(self.w)
+        feature_scores = np.exp(fs - np.max(fs, axis=1, keepdims=True))
+        probs = feature_scores / np.sum(feature_scores, axis=1, keepdims=True)
+        prob_scores = probs
+        prob_scores[range(N), y_train] -= 1
+        prob_scores /= N
+        dW = X_train.T.dot(prob_scores)
+        dW += self.reg_const * self.w
+        return dW
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -68,7 +52,6 @@ class Softmax:
                 N examples with D dimensions
             y_train: a numpy array of shape (N,) containing training labels
         """
-        # TODO: implement me
         # Parse dimensions
         samples = X_train.shape[0]
         dim = X_train.shape[1]
@@ -76,7 +59,7 @@ class Softmax:
         # Set random weight
         self.w = np.random.rand(dim, self.n_class)
 
-        # Set up mini-batch stocastic gradient descent
+        # Set up mini-batch stochastic gradient descent
         batch_size = 100
         batches = samples // batch_size
         indices = np.arange(samples)
@@ -86,7 +69,7 @@ class Softmax:
             y_pred = X_train @ self.w
             temp = [np.argmax(i) for i in y_pred]
             print("Epoch", epoch, "Accuracy", np.sum(y_train == temp) / len(y_train) * 100)
-            
+
             # Gradient descent
             np.random.shuffle(indices)
             for batch in range(batches):
@@ -94,13 +77,14 @@ class Softmax:
                 end = (batch + 1) * batch_size
                 if end >= samples:
                     end = -1
-                batch_indices = indices[start: end]
-                batch_w = self.calc_gradient(X_train[batch_indices], y_train[batch_indices])
+                batch_indices = indices[start:end]
+                batch_X = X_train[batch_indices]
+                batch_y = y_train[batch_indices]
+                batch_w = self.calc_gradient(batch_X, batch_y)
                 self.w -= self.lr * batch_w
-            
+
             # Decrease learning rate
-            self.lr *= 0.85
-        
+            self.lr *= 0.95
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """Use the trained weights to predict labels for test data points.

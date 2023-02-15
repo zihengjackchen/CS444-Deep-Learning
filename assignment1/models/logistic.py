@@ -37,12 +37,16 @@ class Logistic:
         """
         # TODO: implement me
         N, D = X_train.shape
-        self.w = (0.01) * np.random.rand(D)  # initialize a very small weight to train
+        self.w = np.random.rand(D)  # initialize a very small weight to train
         for epoch in range(self.epochs):
-            print("Epoch", epoch)
+            # Print intermediate accuracy
+            y_pred = X_train @ self.w
+            temp = [-1 if i<0 else 1 for i in y_pred]
+            print("Epoch", epoch, "Accuracy", np.sum(y_train == temp) / len(y_train) * 100)
             
             for j in range(N):
                 self.w += (self.lr * self.sigmoid(-y_train[j] * (self.w.T @ X_train[j])) * y_train[j] * X_train[j])
+
                 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """Use the trained weights to predict labels for test data points.
