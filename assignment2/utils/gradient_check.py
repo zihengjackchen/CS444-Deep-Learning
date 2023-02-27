@@ -4,7 +4,7 @@ from typing import Callable
 
 import numpy as np
 
-
+# Callable[[Arg1Type, Arg2Type], ReturnType]
 def eval_numerical_gradient(
     f: Callable[[np.ndarray], np.ndarray],
     x: np.ndarray,

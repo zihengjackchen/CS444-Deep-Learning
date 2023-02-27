@@ -47,10 +47,11 @@ class NeuralNetwork:
 
         self.params = {}
         for i in range(1, num_layers + 1):
-            self.params["W" + str(i)] = np.random.randn(
-                sizes[i - 1], sizes[i]
-            ) / np.sqrt(sizes[i - 1])
+            self.params["W" + str(i)] = np.random.randn(sizes[i - 1], sizes[i]) / np.sqrt(sizes[i - 1])
             self.params["b" + str(i)] = np.zeros(sizes[i])
+            print("W" + str(i) + " shape: ", self.params["W" + str(i)].shape)
+            print("b" + str(i) + str(i) + " shape: ", self.params["b" + str(i)].shape)
+
 
     def linear(self, W: np.ndarray, X: np.ndarray, b: np.ndarray) -> np.ndarray:
         """Fully connected (linear) layer.
@@ -118,6 +119,7 @@ class NeuralNetwork:
         # the same keys as self.params. You can use functions like
         # self.linear, self.relu, and self.mse in here.
         self.outputs["R" + str(0)] = X
+        print(X.shape)
         curr_X = X
         for curr_layer in range(1, self.num_layers + 1):
             curr_X = self.linear(self.params["W" + str(curr_layer)], curr_X, self.params["b" + str(curr_layer)])
@@ -152,7 +154,7 @@ class NeuralNetwork:
 
         # final result from forward
         scores = self.outputs["S" + str(self.num_layers)]
-        print(scores.shape)
+        # print(scores.shape)
 
         # MSE Loss
         loss = self.mse(scores, y)
