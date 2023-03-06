@@ -20,6 +20,7 @@ class NeuralNetwork:
         hidden_sizes: Sequence[int],
         output_size: int,
         num_layers: int,
+        opt: str = "SGD"
     ):
         """Initialize the model. Weights are initialized to small random values
         and biases are initialized to zero. Weights and biases are stored in
@@ -47,11 +48,29 @@ class NeuralNetwork:
 
         self.params = {}
         for i in range(1, num_layers + 1):
+<<<<<<< HEAD
             self.params["W" + str(i)] = np.random.randn(sizes[i - 1], sizes[i]) / np.sqrt(sizes[i - 1])
             self.params["b" + str(i)] = np.zeros(sizes[i])
             print("W" + str(i) + " shape: ", self.params["W" + str(i)].shape)
             print("b" + str(i) + str(i) + " shape: ", self.params["b" + str(i)].shape)
 
+=======
+            
+            if opt == "SGD":
+                self.params["W" + str(i)] = 0.01 * np.random.randn(sizes[i - 1], sizes[i])
+                self.params["b" + str(i)] = 0.01 * np.random.randn(sizes[i])
+            
+            elif opt == "Adam":
+                self.params["W" + str(i)] = np.random.randn(sizes[i - 1], sizes[i]) / np.sqrt(sizes[i - 1])
+                self.params["b" + str(i)] = np.zeros(sizes[i])
+                
+                self.params["Mw" + str(i)] = np.zeros((sizes[i - 1], sizes[i]))
+                self.params["Mb" + str(i)] = np.zeros(sizes[i])
+                self.params["Vw" + str(i)] = np.zeros((sizes[i - 1], sizes[i]))
+                self.params["Vb" + str(i)] = np.zeros(sizes[i])
+            
+        self.t = 0
+>>>>>>> 0ded59f (need to make sure by hand)
 
     def linear(self, W: np.ndarray, X: np.ndarray, b: np.ndarray) -> np.ndarray:
         """Fully connected (linear) layer.
@@ -101,7 +120,12 @@ class NeuralNetwork:
 
     def mse(self, y: np.ndarray, p: np.ndarray) -> np.ndarray:
       # TODO implement this
-      return np.square(np.subtract(y,p)).mean()
+      # (Observed - predicted)^2
+      return np.mean((y - p)**2)
+    
+    def mse_grad(self, y: np.ndarray, p: np.ndarray) -> np.ndarray:
+      N = y.shape[0]
+      return -2*(y - p)/N
       
 
     def forward(self, X: np.ndarray) -> np.ndarray:
@@ -118,22 +142,26 @@ class NeuralNetwork:
         # self.outputs as it will be used during back-propagation. You can use
         # the same keys as self.params. You can use functions like
         # self.linear, self.relu, and self.mse in here.
+<<<<<<< HEAD
         self.outputs["R" + str(0)] = X
         print(X.shape)
+=======
+        self.outputs["Result" + str(0)] = X
+>>>>>>> 0ded59f (need to make sure by hand)
         curr_X = X
         for curr_layer in range(1, self.num_layers + 1):
             curr_X = self.linear(self.params["W" + str(curr_layer)], curr_X, self.params["b" + str(curr_layer)])
-            self.outputs["L" + str(curr_layer)] = curr_X
+            self.outputs["Linear" + str(curr_layer)] = curr_X
             
             # The network uses a ReLU nonlinearity after each fully connected layer
             if curr_layer < self.num_layers:
                 curr_X = self.relu(curr_X)
-                self.outputs["R" + str(curr_layer)] = curr_X
+                self.outputs["Result" + str(curr_layer)] = curr_X
              
             #  The outputs of the last fully-connected layer are passed through a sigmoid.
             else:
                 curr_X = self.sigmoid(curr_X)
-                self.outputs["S" + str(curr_layer)] = curr_X
+                self.outputs["Sigmoid" + str(curr_layer)] = curr_X
             
         return curr_X
     
@@ -143,7 +171,7 @@ class NeuralNetwork:
         Parameters:
             y: training value targets
         Returns:
-            Total loss for this batch of training samples
+            Total loss for this batch ofinal_resultf training samples
         """
         self.gradients = {}
         # TODO: implement me. You'll want to store the gradient of each
@@ -152,31 +180,43 @@ class NeuralNetwork:
         # keys as self.params. You can add functions like self.linear_grad,
         # self.relu_grad, and self.softmax_grad if it helps organize your code.
 
+<<<<<<< HEAD
         # final result from forward
         scores = self.outputs["S" + str(self.num_layers)]
         # print(scores.shape)
+=======
+        # Final result from forward
+        final_pred = self.outputs["Sigmoid" + str(self.num_layers)]
+        print(final_pred.shape)
+>>>>>>> 0ded59f (need to make sure by hand)
 
-        # MSE Loss
-        loss = self.mse(scores, y)
-        grad = scores
+        # MSE Loss and gradient
+        loss = self.mse(y, final_pred)
+        grad = self.mse_grad(y, final_pred)
+        print("mse grad", grad)
 
-        # for the final sigmoid layer
-        self.gradients["S" + str(self.num_layers)] = self.sigmoid_grad(scores)
+        grad = self.sigmoid_grad(grad)
+        print("Sigmoid grad", grad)
 
-        # for prior linear and relu layers
+        # The final sigmoid layer
+        self.gradients["Sigmoid" + str(self.num_layers)] = grad
+
+        # Prior linear and relu layers
         for i in range(self.num_layers, 0, -1):
             W = self.params["W" + str(i)]
             b = self.params["b" + str(i)]
+            
             # linear grad
-            input_X = self.outputs["R" + str(i - 1)]
-            grad_W = input_X.T @ grad + W
+            input_X = self.outputs["Result" + str(i - 1)]
+            grad_W = input_X.T @ grad
             grad_b = np.ones(grad.shape[0]).T @ grad + b
             grad_X = grad @ W.T
             self.gradients["W" + str(i)] = grad_W
             self.gradients["b" + str(i)] = grad_b
+            
             # relu grad
             if i > 1:
-                input_X = self.outputs["L" + str(i - 1)]
+                input_X = self.outputs["Linear" + str(i - 1)]
                 grad_Z = self.relu_grad(input_X)
                 grad = grad_X * grad_Z
         
@@ -224,3 +264,4 @@ class NeuralNetwork:
                 self.params["W" + str(i)] -= lr * Mw_hat / (Vw_hat ** 0.5 + eps)
                 self.params["b" + str(i)] -= lr * Mb_hat / (Vb_hat ** 0.5 + eps)
         pass
+
