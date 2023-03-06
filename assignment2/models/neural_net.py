@@ -107,7 +107,10 @@ class NeuralNetwork:
     def mse(self, y: np.ndarray, p: np.ndarray) -> np.ndarray:
       # TODO implement this
       # (Observed - predicted)^2
-      return np.square(np.subtract(y,p)).mean() * self.output_size
+    #   return np.square(np.subtract(y,p)).mean() * self.output_size
+      return np.square(np.subtract(y,p)).mean()
+    
+    
     
     def mse_grad(self, y: np.ndarray, p: np.ndarray) -> np.ndarray:
       N = y.shape[0]
@@ -187,8 +190,8 @@ class NeuralNetwork:
             grad_W = input_X.T @ grad
             grad_b = np.ones(grad.shape[0]).T @ grad
             grad_X = grad @ W.T
-            self.gradients["W" + str(i)] = grad_W
-            self.gradients["b" + str(i)] = grad_b
+            self.gradients["W" + str(i)] = grad_W / self.output_size
+            self.gradients["b" + str(i)] = grad_b / self.output_size
             
             # relu grad
             if i > 1:
@@ -198,10 +201,6 @@ class NeuralNetwork:
                 grad = grad_X * grad_Z
         
         return loss
-
-
-
-
 
 
     def update(
