@@ -48,17 +48,10 @@ class NeuralNetwork:
 
         self.params = {}
         for i in range(1, num_layers + 1):
-<<<<<<< HEAD
-            self.params["W" + str(i)] = np.random.randn(sizes[i - 1], sizes[i]) / np.sqrt(sizes[i - 1])
-            self.params["b" + str(i)] = np.zeros(sizes[i])
-            print("W" + str(i) + " shape: ", self.params["W" + str(i)].shape)
-            print("b" + str(i) + str(i) + " shape: ", self.params["b" + str(i)].shape)
-
-=======
             
             if opt == "SGD":
-                self.params["W" + str(i)] = 0.01 * np.random.randn(sizes[i - 1], sizes[i])
-                self.params["b" + str(i)] = 0.01 * np.random.randn(sizes[i])
+                self.params["W" + str(i)] = np.random.randn(sizes[i - 1], sizes[i]) / np.sqrt(sizes[i - 1])
+                self.params["b" + str(i)] = np.zeros(sizes[i])
             
             elif opt == "Adam":
                 self.params["W" + str(i)] = np.random.randn(sizes[i - 1], sizes[i]) / np.sqrt(sizes[i - 1])
@@ -70,7 +63,6 @@ class NeuralNetwork:
                 self.params["Vb" + str(i)] = np.zeros(sizes[i])
             
         self.t = 0
->>>>>>> 0ded59f (need to make sure by hand)
 
     def linear(self, W: np.ndarray, X: np.ndarray, b: np.ndarray) -> np.ndarray:
         """Fully connected (linear) layer.
@@ -104,24 +96,18 @@ class NeuralNetwork:
         # TODO: implement me
         return 1 * (X > 0)
 
-    def _sigmoid(x):
-        if x >= 0:
-            z = np.exp(-x)
-            return 1 / (1 + z)
-        else:
-            z = np.exp(x)
-            return z / (1 + z)
+    def sigmoid(self, x: np.ndarray) -> np.ndarray:
+        # TODO ensure that this is numerically stable
+        return 1 / (1 + np.exp(-x))
     
-    def _sigmoid_grad(x):
-        return NeuralNetwork._sigmoid(x) * (1-NeuralNetwork._sigmoid(x))
-
-    sigmoid = np.vectorize(_sigmoid)
-    sigmoid_grad = np.vectorize(_sigmoid_grad)
+    def sigmoid_grad(self, y: np.ndarray) -> np.ndarray:
+        # sigmoid_val = self.sigmoid(y)
+        return y * (1 - y)
 
     def mse(self, y: np.ndarray, p: np.ndarray) -> np.ndarray:
       # TODO implement this
       # (Observed - predicted)^2
-      return np.mean((y - p)**2)
+      return np.square(np.subtract(y,p)).mean() * self.output_size
     
     def mse_grad(self, y: np.ndarray, p: np.ndarray) -> np.ndarray:
       N = y.shape[0]
@@ -142,12 +128,7 @@ class NeuralNetwork:
         # self.outputs as it will be used during back-propagation. You can use
         # the same keys as self.params. You can use functions like
         # self.linear, self.relu, and self.mse in here.
-<<<<<<< HEAD
-        self.outputs["R" + str(0)] = X
-        print(X.shape)
-=======
         self.outputs["Result" + str(0)] = X
->>>>>>> 0ded59f (need to make sure by hand)
         curr_X = X
         for curr_layer in range(1, self.num_layers + 1):
             curr_X = self.linear(self.params["W" + str(curr_layer)], curr_X, self.params["b" + str(curr_layer)])
@@ -180,25 +161,20 @@ class NeuralNetwork:
         # keys as self.params. You can add functions like self.linear_grad,
         # self.relu_grad, and self.softmax_grad if it helps organize your code.
 
-<<<<<<< HEAD
-        # final result from forward
-        scores = self.outputs["S" + str(self.num_layers)]
-        # print(scores.shape)
-=======
         # Final result from forward
         final_pred = self.outputs["Sigmoid" + str(self.num_layers)]
-        print(final_pred.shape)
->>>>>>> 0ded59f (need to make sure by hand)
+        # print(final_pred.shape)
 
         # MSE Loss and gradient
         loss = self.mse(y, final_pred)
-        grad = self.mse_grad(y, final_pred)
-        print("mse grad", grad)
+        # print("mse loss", loss)
 
-        grad = self.sigmoid_grad(grad)
-        print("Sigmoid grad", grad)
+        mse_grad = self.mse_grad(y, final_pred)
+        # print("mse grad", mse_grad)
 
         # The final sigmoid layer
+        grad = self.sigmoid_grad(final_pred) * mse_grad
+        # print("Sigmoid grad", grad)
         self.gradients["Sigmoid" + str(self.num_layers)] = grad
 
         # Prior linear and relu layers
@@ -209,7 +185,7 @@ class NeuralNetwork:
             # linear grad
             input_X = self.outputs["Result" + str(i - 1)]
             grad_W = input_X.T @ grad
-            grad_b = np.ones(grad.shape[0]).T @ grad + b
+            grad_b = np.ones(grad.shape[0]).T @ grad
             grad_X = grad @ W.T
             self.gradients["W" + str(i)] = grad_W
             self.gradients["b" + str(i)] = grad_b
@@ -218,6 +194,7 @@ class NeuralNetwork:
             if i > 1:
                 input_X = self.outputs["Linear" + str(i - 1)]
                 grad_Z = self.relu_grad(input_X)
+                # print("Relu grad", grad_Z)
                 grad = grad_X * grad_Z
         
         return loss
