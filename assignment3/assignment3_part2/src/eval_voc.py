@@ -166,6 +166,7 @@ def evaluate(model, test_dataset_file, img_root, test_loader=None):
             image_id,
             prob,
         ) in result:  # image_id is actually image_path
+            # print(prob)
             preds[class_name].append([image_id, prob, x1, y1, x2, y2])
 
     aps = voc_eval(preds, targets, VOC_CLASSES=VOC_CLASSES)

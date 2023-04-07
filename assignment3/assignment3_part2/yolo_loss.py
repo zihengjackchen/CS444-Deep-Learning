@@ -72,7 +72,7 @@ class YoloLoss(nn.Module):
         x2 = x / self.S + 0.5 * w
         y2 = y / self.S + 0.5 * h
 
-        boxes = torch.stack((x1, y1, x2, y2), dim=1)
+        boxes = torch.stack((x1, y1, x2, y2), dim=1).cuda()
         return boxes
 
     def find_best_iou_boxes(self, pred_box_list, box_target):
@@ -95,36 +95,27 @@ class YoloLoss(nn.Module):
 
         ### CODE ###
         # Your code here
-        best_ious = []
-        best_boxes = []
+        N = box_target.size(0)
+        box_target_processed = torch.zeros((N,4)).cuda()       
+        box_target_processed = self.xywh2xyxy(box_target[:,0:4])
+        
+        iou1 = compute_iou(self.xywh2xyxy(pred_box_list[0][:,0:4]), box_target_processed)
+        iou2 = compute_iou(self.xywh2xyxy(pred_box_list[1][:,0:4]), box_target_processed)
 
-        # running a for loop that iterates "batch_sizexSxS" times and calling compute_iou on the ith pred_box and ith target_box.
-        for i in range(len(box_target)):
-            box_target_i = box_target[i].unsqueeze(0)
+        iou1 = torch.diag(iou1, 0)
+        iou2 = torch.diag(iou2, 0)
 
-            cur_ious = []
-            cur_boxes = []
+        best_boxes = torch.zeros((N,5))
+        best_ious = torch.zeros((N,1))
 
-            for j in range(len(pred_box_list)):
-                cur_box_pred_j = pred_box_list[j][i].unsqueeze(0)
-                box_pred_xyxy = self.xywh2xyxy(cur_box_pred_j)
-                cur_iou = self.compute_iou(box_pred_xyxy, box_target_i)
-
-                cur_ious.append(cur_iou)
-                cur_boxes.append(cur_box_pred_j)
-
-            cur_ious = torch.cat(cur_ious, dim=0)
-            cur_boxes = torch.cat(cur_boxes, dim=0)
-
-            # Find the best iou
-            best_iou, best_idx = cur_ious.max(dim=0)
-
-            best_ious.append(best_iou)
-            best_boxes.append(cur_boxes[best_idx])
-
-        best_ious = torch.cat(best_ious, dim=0).unsqueeze(1)
-        best_boxes = torch.cat(best_boxes, dim=0)
-
+        for j in range(iou1.size(0)):
+            if (iou1[j] >= iou2[j]):
+                best_boxes[j] = pred_box_list[0][j]
+                best_ious[j] = iou1[j]
+            else:
+                best_boxes[j] = pred_box_list[1][j]
+                best_ious[j] = iou2[j]
+            
         return best_ious, best_boxes
 
     def get_class_prediction_loss(self, classes_pred, classes_target, has_object_map):
@@ -143,9 +134,11 @@ class YoloLoss(nn.Module):
         # sum of squared differences of class vectors of size 20
         # Only if ground truth has object
 
+        N = classes_pred.size(0)
         pred_loss = F.mse_loss(classes_pred[has_object_map], classes_target[has_object_map].float(), reduction = 'sum')
 
-        return pred_loss// classes_pred.size(0)
+        # https://campuswire.com/c/G333B6F49/feed/613
+        return pred_loss/N
 
     def get_no_object_loss(self, pred_boxes_list, has_object_map):
         """
@@ -168,8 +161,8 @@ class YoloLoss(nn.Module):
         no_obj_map = ~ has_object_map
         
         for i in range(self.B):
-            boxes = pred_boxes_list[i][no_obj_map][-1]
-            loss += F.mse_loss(boxes.float(), torch.zeros(boxes.size()).float(), reduction = 'sum')/boxes.size(0)
+            boxes = pred_boxes_list[i][no_obj_map]
+            loss += F.mse_loss(boxes.float(), torch.zeros(boxes.size()).float().cuda(), reduction = 'sum')/boxes.size(0)
         
        # print("no object loss:  " + str(loss))
         loss *= self.l_noobj
@@ -190,9 +183,10 @@ class YoloLoss(nn.Module):
         """
         ### CODE
         # your code here
+        N = box_pred_conf.size(0)
         box_target_conf = box_target_conf.detach()
         loss = F.mse_loss(box_pred_conf.float(), box_target_conf.float(), reduction = 'sum')
-        return loss/box_pred_conf.size(0)
+        return loss/N
 
 
     def get_regression_loss(self, box_pred_response, box_target_response):
@@ -240,11 +234,11 @@ class YoloLoss(nn.Module):
         # split the pred tensor from an entity to separate tensors:
         # -- pred_boxes_list: a list containing all bbox prediction (list) [(tensor) size (N, S, S, 5)  for B pred_boxes]
         # -- pred_cls (containing all classification prediction)
-        pred_boxes_list = [pred_tensor[:,:,:,0:5],pred_tensor[:,:,:,5:10]]
-        pred_cls = pred_tensor[:,:,:,10:30]
+        pred_boxes_list = [pred_tensor[:,:,:,0:5], pred_tensor[:,:,:,5:10]]     # Bx5
+        pred_cls = pred_tensor[:,:,:,10:30]                                     # 20
 
-        # compcute classification loss
-        prediction_loss = self.get_class_prediction_loss(pred_cls,target_cls, has_object_map)
+        # compute classification loss
+        prediction_loss = self.get_class_prediction_loss(pred_cls, target_cls, has_object_map)
 
         # compute no-object loss
         no_obj_loss = self.get_no_object_loss(pred_boxes_list, has_object_map)
@@ -255,6 +249,7 @@ class YoloLoss(nn.Module):
         target_boxes = target_boxes[has_object_map]
         for i in range(self.B):
             pred_boxes_list[i] = pred_boxes_list[i][has_object_map]
+        
         # find the best boxes among the 2 (or self.B) predicted boxes and the corresponding iou
         best_ious, best_boxes = self.find_best_iou_boxes(pred_boxes_list, target_boxes.cuda())
 
