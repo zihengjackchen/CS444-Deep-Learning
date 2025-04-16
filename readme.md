@@ -1,6 +1,3 @@
-## CS 444: Deep Learning for Computer Vision
-### Spring 2023 CS 444 Assignments
-Content:
 1. Linear classifiers
 2. Multi-Layer Neural Networks
 3. Self-supervised and transfer learning, object detection
